@@ -1,2 +1,4 @@
 migrations
 venv
+alembic.ini
+requirements.txt
