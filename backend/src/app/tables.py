@@ -1,20 +1,26 @@
+from datetime import datetime
 from uuid import uuid4
-from typing import Annotated
-from enum import Enum
+from typing import List
+import enum
 
-from sqlalchemy import ForeignKey, String, Integer, JSON, Uuid
+from sqlalchemy import Enum, String, JSON, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 
-class PreferedLanguage(Enum):
+class PreferedLanguage(enum.Enum):
     RUSSIAN = 'ru'
     ENGLISH = 'en'
 
 
 class Base(DeclarativeBase):
     type_annotation_map = {
-        dict[PreferedLanguage, str]: JSON
+        dict[PreferedLanguage, str]: JSON,
+        List[dict[str, datetime]]: JSON,
+        PreferedLanguage: Enum(
+            PreferedLanguage, 
+            native_enum=False
+        )
     }
 
 
@@ -25,6 +31,7 @@ class User(Base):
     id : Mapped[uuid4] = mapped_column(Uuid(), primary_key=True)
     username : Mapped[str] = mapped_column(String(64))
     prefered_language : Mapped[PreferedLanguage]
+    achievements_list: Mapped[List[dict[str, datetime]]]
 
 
 class Achievements(Base):
