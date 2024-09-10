@@ -1,4 +1,6 @@
 
+from typing import List
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,9 +26,9 @@ async def create_achievement(
 
 @achievements_router.get("/")
 async def get_achievements(
-    session
-):
-    pass
+    session = Depends(get_async_session)
+)-> List[ShowAchievement]:
+    return await _get_all_achievements(session)
 
 
 async def _create_new_achievement(
@@ -46,3 +48,20 @@ async def _create_new_achievement(
                 value=achievement.value,
                 description=achievement.description
             )
+        
+
+async def _get_all_achievements(
+    session: AsyncSession
+)-> List[ShowAchievement]:
+    async with session:
+        async with session.begin():
+            achievement_dal = AchievementDAL(session)
+            result_orm = await achievement_dal.get_all_achievements()
+            achievement_list = [
+                ShowAchievement.model_validate(
+                row, 
+                from_attributes=True
+            ) 
+            for row in result_orm
+        ]
+        return achievement_list

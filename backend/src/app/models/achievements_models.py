@@ -13,13 +13,13 @@ class Description(TypedDict):
 class TunedModel(BaseModel):
     class Config:
 
-        orm_mode = True
+        from_attributes = True
 
 
 class ShowAchievement(TunedModel):
     name: str
     value: int
-    description: Description
+    description: Description 
 
 
 class AchievementCreate(BaseModel):
