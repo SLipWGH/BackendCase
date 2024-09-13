@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.dals.user_dal import UserDAL
 from app.models.user_models import UserCreate, ShowUser, AddUserAchievement, UserAchievement, ShowUserAchievements
 from app.database import get_async_session
-from pydantic import UUID4
+
 
 user_router = APIRouter(
     prefix="/users",
@@ -34,7 +34,7 @@ async def add_user_achievement(
 async def get_user_data(
     user_id : UUID,
     session: AsyncSession = Depends(get_async_session)
-):
+)-> ShowUser:
     return await _get_user_data(user_id, session)
 
 
@@ -42,7 +42,7 @@ async def get_user_data(
 async def get_user_achievements(
     user_id : str,
     session: AsyncSession = Depends(get_async_session)
-):
+)-> list[UserAchievement]:
     user_id = await validate_uuid(user_id)
     return await _get_user_achievements(user_id, session)
 
@@ -87,7 +87,7 @@ async def _get_user_data(
             user_dal = UserDAL(session)
             user = await user_dal.get_user_by_id(user_id)
             return ShowUser(
-                user_id=user_id,
+                user_id=user.id,
                 username=user.username,
                 prefered_language=user.prefered_language        
             )
@@ -96,14 +96,14 @@ async def _get_user_data(
 async def _get_user_achievements(
     user_id: UUID,
     session: AsyncSession
-)-> ShowUserAchievements:
+)-> list[UserAchievement]:
     async with session:
         async with session.begin():
             user_dal = UserDAL(session)
             result, lang = await user_dal.get_user_achievements_list(user_id) 
             user_achievements = []
             for user_achievement in result:
-                date, achievement = user_achievement
+                date, achievement = user_achievement.tuple()
                 user_achievements.append(
                     UserAchievement(
                         achievement_name=achievement.name,
@@ -112,7 +112,7 @@ async def _get_user_achievements(
                         achievement_date=date
                     )
                 )
-            return ShowUserAchievements(user_achievements=user_achievements)
+            return user_achievements
 
 
 async def validate_uuid(

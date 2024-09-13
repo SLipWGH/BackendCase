@@ -30,7 +30,7 @@ async def get_max_achievements_value_user(
 async def get_max_difference_achievements_value_users(
     session: AsyncSession = Depends(get_async_session)
 )-> tuple[ShowUser, ShowUser]:
-    return await _get_user_with_max_achievements_value_summ(session)
+    return await _get_users_with_max_achievements_value_difference(session)
 
 
 @statistics_router.get("/get-min-difference-achivements-value-users")
@@ -59,7 +59,7 @@ async def _get_user_with_max_achievements_count(
                 username=user.username,
                 prefered_language=user.prefered_language
             )
-        
+
 
 async def _get_user_with_max_achievements_value_summ(
     session: AsyncSession
@@ -72,6 +72,27 @@ async def _get_user_with_max_achievements_value_summ(
                 user_id=user.id,
                 username=user.username,
                 prefered_language=user.prefered_language
+            )
+
+
+async def _get_users_with_max_achievements_value_difference(
+    session: AsyncSession
+)-> tuple[ShowUser, ShowUser]:
+    async with session:
+        async with session.begin():
+            statistics_dal = StatisticsDAL(session)
+            user1, user2 = await statistics_dal.users_with_max_achievements_value_difference()
+            return (
+                ShowUser(
+                    user_id=user1.id,
+                    username=user1.username,
+                    prefered_language=user1.prefered_language
+                ),
+                ShowUser(
+                    user_id=user2.id,
+                    username=user2.username,
+                    prefered_language=user2.prefered_language
+                )
             )
 
 
@@ -105,10 +126,11 @@ async def _get_week_achievement_streak_users(
             result = await statistics_dal.get_week_achievement_streak_users()
             users = []
             for user in result:
+                user_id, username, prefered_language = user.tuple()
                 users.append(ShowUser(
-                    user_id=user.user_id,
-                    username=user.username,
-                    prefered_language=user.prefered_language
+                    user_id=user_id,
+                    username=username,
+                    prefered_language=prefered_language
                 ))
 
             return users
