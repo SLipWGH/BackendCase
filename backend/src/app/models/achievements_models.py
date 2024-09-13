@@ -6,8 +6,8 @@ from pydantic import BaseModel, StringConstraints, Field
 
 
 class Description(TypedDict):
-    ru : Annotated[str, StringConstraints(max_length=256)]
-    en : Annotated[str, StringConstraints(max_length=256)]
+    Русский : Annotated[str, StringConstraints(max_length=256)]
+    English : Annotated[str, StringConstraints(max_length=256)]
 
 
 class TunedModel(BaseModel):
