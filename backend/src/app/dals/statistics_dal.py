@@ -1,10 +1,11 @@
 
-from sqlalchemy import select, join, func, desc, and_
+from sqlalchemy import select, func, Row
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from typing import Sequence, Tuple
 
-from app.tables import User, Achievement, UsersAchievements
+from app.tables import User, Achievement, UsersAchievements, pkuuid, PreferedLanguage
 
 class StatisticsDAL:
     '''Data Access Layer for operating user info'''
@@ -48,6 +49,66 @@ class StatisticsDAL:
         result = await self.db_session.execute(query)
         return result.scalar_one()
 
+
+    async def users_with_max_achievements_value_difference(
+        self
+    )-> tuple[User, User]:
+        user_scores = (
+            select(
+                UsersAchievements.user_id,
+                func.sum(Achievement.value).label("total_score")
+            )
+            .join(
+                Achievement,
+                UsersAchievements.achievement_name == Achievement.name
+            )
+            .group_by(
+                UsersAchievements.user_id
+            )
+            .cte('UserScores')
+        )
+
+        user1_scores = user_scores.alias()
+        user2_scores = user_scores.alias()
+        user_pairs = (
+            select(
+                user1_scores.c.user_id.label("user1"),
+                user2_scores.c.user_id.label("user2"),
+                func.abs(
+                    user1_scores.c.total_score - user2_scores.c.total_score
+                )
+                .label("score_difference")
+            )
+            .join_from(
+                user1_scores,
+                user2_scores,
+                user1_scores.c.user_id < user2_scores.c.user_id,
+
+            )
+            .cte("UserPairs")
+        )
+
+        user1 = aliased(User)
+        user2 = aliased(User)
+
+        query = (
+            select(
+                user1,
+                user2
+            )
+            .select_from(
+                user_pairs
+                .join(user1, user_pairs.c.user1 == user1.id)
+                .join(user2, user_pairs.c.user2 == user2.id)
+            )
+            .order_by(user_pairs.c.score_difference.desc())
+            .limit(1)
+        )
+        
+        result = await self.db_session.execute(query)
+
+
+        return result.fetchone()
 
     async def users_with_min_achievements_value_difference(
         self
@@ -104,7 +165,7 @@ class StatisticsDAL:
             .order_by(user_pairs.c.score_difference.asc())
             .limit(1)
         )
-        # print(query.compile(compile_kwargs={"literal_binds": True}))
+        
         result = await self.db_session.execute(query)
 
 
@@ -113,7 +174,7 @@ class StatisticsDAL:
 
     async def get_week_achievement_streak_users(
         self
-    )-> list[User]:
+    )-> Sequence[Row[Tuple[pkuuid, str, PreferedLanguage]]]:
         
         # Алиасы для таблиц
         users_achievements = aliased(UsersAchievements)
@@ -188,9 +249,9 @@ class StatisticsDAL:
             .join(users_with_7_consecutive_days_cte, User.id == users_with_7_consecutive_days_cte.c.user_id)
         )
 
-        print(query.compile(compile_kwargs={"literal_binds": True}))
+       
         result = await self.db_session.execute(query)
-        return result.scalars().all()
+        return result.fetchall()
                 
 
             

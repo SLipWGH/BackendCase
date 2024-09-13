@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, Row
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tables import User, Achievement, UsersAchievements
-
+from app.tables import User, Achievement, UsersAchievements, timestamp
+from typing import Sequence, Tuple
 class UserDAL:
     '''Data Access Layer for operating user info'''
 
@@ -51,16 +51,7 @@ class UserDAL:
     async def get_user_achievements_list(
         self,
         user_id: UUID
-    )-> tuple[list[tuple], str]:
-        
-        # query = (
-        #     select(Achievement)
-        #     .options(selectinload(Achievement.users_with_achievement))
-        #     .where(User.id == user_id)
-        # )
-        # print(query.compile(compile_kwargs={"literal_binds": True}))
-        # result = await self.db_session.execute(query)
-        
+    )-> tuple[Sequence[Row[Tuple[timestamp, Achievement]]], str]:
         
         query = (
             select(UsersAchievements.date, Achievement)
@@ -75,4 +66,6 @@ class UserDAL:
             .where(User.id == user_id)
         )
 
-        return (result, lang.scalar_one())
+
+
+        return (result.fetchall(), lang.scalar_one())
